@@ -1,0 +1,67 @@
+name: Enhancment [Form]
+description: A suggested improvement that makes something simpler but doesn't add to existing functionality
+title: "[Enhancement]: "
+labels: ["Type - Enhancement :sparkler:", "Triage"]
+body:
+  - type: markdown
+    attributes:
+      value: A suggested improvement that makes something simpler but doesn't add to existing functionality
+  - type: dropdown
+    id: Product
+    attributes:
+      label: Product
+      description: For which product is this Enchancemnet for?
+      options:
+        - POMA
+        - POM (Wrong Repository)
+        - POH (Wrong Repository)
+        - Gateway
+        - Connecting Shop (Wrong Repository)
+        - Connecting Prodrisk (Wrong Repository)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Which Product version [Other versions should be in Additional info]
+      placeholder: v0.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: Risk
+    attributes:
+      label: Risk Estimation
+      description: What is the estimated risk of adding this enchancement to previous functionality
+      options:
+        - Low
+        - Medium
+        - High
+    validations:
+      required: true
+  - type: textarea
+    id: improvement
+    attributes:
+      label: Improvement
+      description: What is the suggessted enchacment
+      placeholder: This we can do better
+    validations:
+      required: true
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional Info
+      description: Any additional info?
+      placeholder: Any details!
+    validations:
+      required: false
+  - type: checkboxes
+    id: status
+    attributes:
+      label: Status
+      description: Steps to check of for developers
+      options:
+        - label: Has enhancement been accepted
+        - label: soltuion has been proposed
+        - label: Has been implemented
+        - label: Has been tested

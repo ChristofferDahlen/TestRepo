@@ -1,0 +1,90 @@
+name: Setup new Issues
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+
+  Product:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Product Name
+        run: |
+          echo "::set-output name=name::$(echo "${{ github.event.issue.body }}" | grep -oe 'Product: .*' | tr '[:upper:]' '[:lower:]')"
+        id: product
+    outputs:
+      Name: ${{ steps.product.outputs.name }}
+
+  Add_Other_Labels:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Add_Other_Labels
+      id: labeler
+      uses: jimschubert/labeler-action@v1
+      with:
+        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+
+  Add_Synced_Labels:
+    runs-on: ubuntu-latest
+    name: Add Synced Labels
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout
+      - uses: Resnovas/label-mastermind@2.1.3
+        name: Labeling
+        with:
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN  }}'
+
+  Add_To_Project:
+    runs-on: ubuntu-latest
+    needs: Product
+    steps:
+    - uses: alex-page/github-project-automation-plus@v0.8.1
+      if: ${{ contains( needs.Product.outputs.name, 'shop' ) }}
+      with:
+        project: Connecting Shop Board 
+        column: Triage
+        repo-token: '${{ secrets.OPT_GH_TOKEN }}'
+
+    - uses: alex-page/github-project-automation-plus@v0.8.1
+      if: ${{ !contains( needs.Product.outputs.name, 'shop' ) }}
+      with:
+        project: Optimisation Core Board
+        column: Triage
+        repo-token: '${{ secrets.OPT_GH_TOKEN }}'
+
+
+  create_comment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions-ecosystem/action-regex-match@v2
+        id: regex-match
+        with:
+          text: ${{ github.event.issue.title }}
+          regex: '^(\[[^\]]*\]:?\s?(title)?)?$'
+          flags: gm
+
+      - uses: actions-ecosystem/action-create-comment@v1
+        if: ${{ steps.regex-match.outputs.match != '' }}
+        with:
+          github_token: ${{ secrets.github_token }}
+          body: |
+            Seems like you have forgotten to fill out the title of issue. Please fill it in properly.
+
+            If this is wrong just ignore this comment
+
+  transfer_issue:
+    runs-on: ubuntu-latest
+    needs: Product
+    steps:
+    - name: Transfer Issue & Comment
+      if: $${{ contains( needs.Product.outputs.name, 'poma') }}
+      uses: lando/transfer-issue-action@v2
+      id: transfer-issue
+      with:
+        token: ${{ secrets.OPT_GH_TOKEN }}
+        router: :TestRepo
+        debug: true
+        create_stub: true

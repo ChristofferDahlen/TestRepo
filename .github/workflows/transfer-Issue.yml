@@ -1,0 +1,23 @@
+on:
+  issues:
+    types:
+      - labeled
+
+
+
+jobs:
+  transfer_issue:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        router:
+          - Product - POMA:TestRepo
+    steps:
+    - name: Transfer Issue & Comment
+      uses: lando/transfer-issue-action@v2
+      id: transfer-issue
+      with:
+        token: ${{ secrets.OPT_GH_TOKEN }}
+        router: ${{ matrix.router }}
+        debug: true
+        create_stub: true
