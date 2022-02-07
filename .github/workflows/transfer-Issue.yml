@@ -1,8 +1,9 @@
+name: transfer
+
 on:
   issues:
     types:
       - labeled
-
 
 
 jobs:
@@ -12,6 +13,7 @@ jobs:
       matrix:
         router:
           - Product - POMA:TestRepo
+          - Product - SHOP:TestRepo
     steps:
     - name: Transfer Issue & Comment
       uses: lando/transfer-issue-action@v2

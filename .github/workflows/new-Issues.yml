@@ -6,17 +6,71 @@ on:
 
 jobs:
 
-  Product:
+########          
+## Check if the issue should be transfered to another repo
+########
+  transfer_issue:
+    name: Tranfser issue
     runs-on: ubuntu-latest
     steps:
-      - name: Get Product Name
-        run: |
-          echo "::set-output name=name::$(echo "${{ github.event.issue.body }}" | grep -oe 'Product: .*' | tr '[:upper:]' '[:lower:]')"
-        id: product
-    outputs:
-      Name: ${{ steps.product.outputs.name }}
+    - name: Match body
+      id: match
+      uses: ChristofferDahlen/Multi-Regex-Match@v1.0
+      with:
+        input: "${{ github.event.issue.body }}"
+        json_match: '{ 
+          "(?i)Product[^\\w\\r\\n]*POMA" : "testRepo",
+          "(?i)Product[^\\w\\r\\n]*POM\b" : "testRepo"
+        }'
+    - run: |
+          if [ "${{ steps.match.outputs.result }}" == "" ]; then
+            echo ::set-output name=remain::true
+          else
+            echo ::set-output name=remain::false
+          fi
+      id: state
 
+    - name: Transfer Issue & Comment
+      if: steps.state.outputs.remain == 'false'
+      uses: christofferDahlen/transfer-issue-action@v3
+      with:
+        target_repo: ${{ steps.match.outputs.result }}
+        token: '${{ secrets.OPT_GH_TOKEN }}'
+        debug: true
+        create_stub: true
+    outputs:
+      remain: ${{ steps.state.outputs.remain }}
+
+########
+## Check if the title is correct 
+########
+
+  check_title:
+    needs: transfer_issue
+    if: needs.transfer_issue.outputs.remain == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions-ecosystem/action-regex-match@v2
+        id: regex-match
+        with:
+          text: ${{ github.event.issue.title }}
+          regex: '^(\[[^\]]*\]:?\s?(title)?)?$'
+          flags: gm
+      - uses: actions-ecosystem/action-create-comment@v1
+        if: ${{ steps.regex-match.outputs.match != '' }}
+        with:
+          github_token: ${{ secrets.github_token }}
+          body: |
+            Seems like you have forgotten to fill out the title of issue. Please fill it in properly.
+
+            If this is wrong just ignore this comment
+
+########
+## Adding other labels
+########
   Add_Other_Labels:
+    needs: transfer_issue
+    if: needs.transfer_issue.outputs.remain == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Add_Other_Labels
@@ -25,8 +79,13 @@ jobs:
       with:
         GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
+########
+## Add the sync labels
+########
 
   Add_Synced_Labels:
+    needs: transfer_issue
+    if: needs.transfer_issue.outputs.remain == 'true'
     runs-on: ubuntu-latest
     name: Add Synced Labels
     steps:
@@ -37,54 +96,33 @@ jobs:
         with:
           GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN  }}'
 
+########
+## Add issue to the appropriate 
+########
+
   Add_To_Project:
+    needs: transfer_issue
+    if: needs.transfer_issue.outputs.remain == 'true'
     runs-on: ubuntu-latest
-    needs: Product
-    steps:
+    steps: 
+    - name: Get Product Name
+      run: |
+        echo "::set-output name=name::$(echo "${{ github.event.issue.body }}" | grep -oe 'Product: .*' | tr '[:upper:]' '[:lower:]')"
+      id: product
+
     - uses: alex-page/github-project-automation-plus@v0.8.1
-      if: ${{ contains( needs.Product.outputs.name, 'shop' ) }}
+      if: ${{ contains( steps.product.outputs.name, 'shop' ) }}
       with:
         project: Connecting Shop Board 
         column: Triage
         repo-token: '${{ secrets.OPT_GH_TOKEN }}'
 
     - uses: alex-page/github-project-automation-plus@v0.8.1
-      if: ${{ !contains( needs.Product.outputs.name, 'shop' ) }}
+      if: ${{ !contains( steps.product.outputs.name, 'shop' ) }}
       with:
         project: Optimisation Core Board
         column: Triage
         repo-token: '${{ secrets.OPT_GH_TOKEN }}'
 
 
-  create_comment:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions-ecosystem/action-regex-match@v2
-        id: regex-match
-        with:
-          text: ${{ github.event.issue.title }}
-          regex: '^(\[[^\]]*\]:?\s?(title)?)?$'
-          flags: gm
 
-      - uses: actions-ecosystem/action-create-comment@v1
-        if: ${{ steps.regex-match.outputs.match != '' }}
-        with:
-          github_token: ${{ secrets.github_token }}
-          body: |
-            Seems like you have forgotten to fill out the title of issue. Please fill it in properly.
-
-            If this is wrong just ignore this comment
-
-  transfer_issue:
-    runs-on: ubuntu-latest
-    needs: Product
-    steps:
-    - name: Transfer Issue & Comment
-      if: $${{ contains( needs.Product.outputs.name, 'poma') }}
-      uses: lando/transfer-issue-action@v2
-      id: transfer-issue
-      with:
-        token: ${{ secrets.OPT_GH_TOKEN }}
-        router: :TestRepo
-        debug: true
-        create_stub: true
