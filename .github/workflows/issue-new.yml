@@ -5,12 +5,14 @@ on:
     types: [opened]
 
 jobs:
-
 ########          
 ## Check if the issue should be transfered to another repo
 ########
   transfer_issue:
+
+
     name: Tranfser issue
+    if: ${{ !github.event.issue.locked && github.event.issue.state != 'closed' }}
     runs-on: ubuntu-latest
     steps:
     - name: Match body
@@ -19,15 +21,24 @@ jobs:
       with:
         input: "${{ github.event.issue.body }}"
         json_match: '{ 
-          "(?i)Product[^\\w\\r\\n]*POMA" : "testRepo",
-          "(?i)Product[^\\w\\r\\n]*POM\b" : "testRepo"
+          "(?i)#\\s*Product[^\\r\\n]*POMA\\b" : "labelOnPRReview",
+          "(?i)#\\s*Product[^\\r\\n]*Gateway\\b" : "testRepo",
+          "(?i)#\\s*Product[^\\r\\n]*POM\\b" : "testRepo",
+          "(?i)#\\s*Product[^\\r\\n]*POH\\b" : "testRepo",
+          "(?i)#\\s*Product[^\\r\\n]*Spotbid\\b" : "false",
+          "(?i)#\\s*Product[^\\r\\n]*(Connecting[^\\w\\r\\n]+)?Shop\\b" : "testRepo",
+          "(?i)#\\s*Product[^\\r\\n]*Prodrisk\\b" : "testRepo",
+          "(?i)#\\s*Product[^\\r\\n]*(Optimal[^\\w\\r\\n]+)?log\\b" : "testRepo"
         }'
     - run: |
-          if [ "${{ steps.match.outputs.result }}" == "" ]; then
+          if [[ "${{github.repository_owner}}/${{ steps.match.outputs.result }}" == "${{ github.repository }}" ||  "${{ steps.match.outputs.result }}" == "" || "${{ steps.match.outputs.result }}" == "false"  ]]
+          then
             echo ::set-output name=remain::true
           else
             echo ::set-output name=remain::false
           fi
+      shell: bash
+      name: Check if we should move from ${{ github.repository }} to ${{ steps.match.outputs.result }}
       id: state
 
     - name: Transfer Issue & Comment
@@ -48,7 +59,7 @@ jobs:
   check_title:
     name: Check Empty title
     needs: transfer_issue
-    if: needs.transfer_issue.outputs.remain == 'true'
+    if: needs.transfer_issue.outputs.remain == 'true' 
     runs-on: ubuntu-latest
     steps:
       - uses: actions-ecosystem/action-regex-match@v2
@@ -105,7 +116,7 @@ jobs:
   Add_To_Project:
     name: Add to project
     needs: transfer_issue
-    if: needs.transfer_issue.outputs.remain == 'true'
+    if: needs.transfer_issue.outputs.remain == 'true' 
     runs-on: ubuntu-latest
     steps: 
     - name: Get Product Name
