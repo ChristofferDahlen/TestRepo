@@ -89,7 +89,7 @@ jobs:
       id: state
 
     - name: Transfer Issue & Comment
-      if: steps.state.outputs.remain == 'false'
+      if: steps.state.outputs.remain == 'false' 
       uses: christofferDahlen/transfer-issue-action@v3
       with:
         target_repo: ${{ steps.match.outputs.result }}
